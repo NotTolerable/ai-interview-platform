@@ -48,6 +48,7 @@ from flask import Flask, request, redirect, session, jsonify
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, String, DateTime, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
+from flask_cors import CORS
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -55,14 +56,16 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-in-prod")
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 
 AUTH0_DOMAIN        = os.getenv("AUTH0_DOMAIN")         # e.g. dev-xxxx.us.auth0.com
 AUTH0_CLIENT_ID     = os.getenv("AUTH0_CLIENT_ID")       # Regular Web App (login)
 AUTH0_CLIENT_SECRET = os.getenv("AUTH0_CLIENT_SECRET")   # Regular Web App (login)
 AUTH0_M2M_CLIENT_ID     = os.getenv("AUTH0_M2M_CLIENT_ID")       # Machine to Machine (scanner)
 AUTH0_M2M_CLIENT_SECRET = os.getenv("AUTH0_M2M_CLIENT_SECRET")   # Machine to Machine (scanner)
-REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:5000/callback")
-FRONTEND_URL        = os.getenv("FRONTEND_URL", "http://localhost:3000")
+REDIRECT_URI        = os.getenv("REDIRECT_URI", "http://localhost:8000/callback")
+FRONTEND_URL        = os.getenv("FRONTEND_URL", "http://localhost:5173")
 DATABASE_URL        = os.getenv("DATABASE_URL", "sqlite:///users.db")
 
 SCOPES = "openid profile email"
@@ -332,7 +335,7 @@ def callback():
         "picture": user_data.get("picture"),
     }
 
-    return redirect(f"{FRONTEND_URL}/dashboard")
+    return redirect(f"http://localhost:5173/home")
 
 
 # ─── Route: /me ───────────────────────────────────────────────────────────────
@@ -506,4 +509,4 @@ def _is_token_valid(access_token: str) -> bool:
     return response.ok
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host="localhost", port=8000)

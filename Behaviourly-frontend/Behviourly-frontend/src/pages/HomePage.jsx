@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useUser } from "../UserContext";
 import "./HomePage.css";
 
 const MOCK_INTERVIEWS = [
@@ -42,8 +42,10 @@ function formatDate() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user } = useAuth0();
-  const name = user?.name?.split(" ")[0] || user?.nickname || "there";
+  const { user, loading } = useUser();
+  const name = user?.name?.split(" ")[0] || "there";
+
+  if (loading) return <div>Loading...</div>;
 
   return (
     <div className="home-page">

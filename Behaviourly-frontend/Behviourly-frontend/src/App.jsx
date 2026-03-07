@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Auth0Provider } from "@auth0/auth0-react";
+import { UserProvider } from "./UserContext";
 import SiteLayout from "./components/SiteLayout";
 import InfoPage from "./pages/InfoPage";
 import HomePage from "./pages/HomePage";
@@ -7,8 +7,8 @@ import CameraPage from "./pages/CameraPage";
 import CameraSummaryPage from "./pages/CameraSummaryPage";
 import ProfilePage from "./pages/ProfilePage";
 import InterviewContextPage from "./pages/InterviewContextPage";
+import Interview from "./Interveiw";
 import "./App.css";
-import Interview from './Interveiw'
 
 function AppRoutes() {
   return (
@@ -27,30 +27,14 @@ function AppRoutes() {
   );
 }
 
-const domain = import.meta.env.VITE_AUTH0_DOMAIN;
-const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
-
-if (!domain || !clientId) {
-  console.warn(
-    "Auth0: set VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID in .env for login to work"
-  );
-}
-
 function App() {
   return (
-    <Auth0Provider
-      domain={domain || "your-tenant.auth0.com"}
-      clientId={clientId || "your-client-id"}
-      authorizationParams={{
-        redirect_uri: window.location.origin,
-      }}
-    >
-      <BrowserRouter>
+    <BrowserRouter>
+      <UserProvider>
         <AppRoutes />
-      </BrowserRouter>
-    </Auth0Provider>
+      </UserProvider>
+    </BrowserRouter>
   );
 }
-
 
 export default App;
