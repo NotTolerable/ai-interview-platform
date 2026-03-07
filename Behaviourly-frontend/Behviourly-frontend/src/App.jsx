@@ -5,6 +5,7 @@ import InfoPage from "./pages/InfoPage";
 import HomePage from "./pages/HomePage";
 import CameraPage from "./pages/CameraPage";
 import ProfilePage from "./pages/ProfilePage";
+import InterviewContextPage from "./pages/InterviewContextPage";
 import "./App.css";
 
 function AppRoutes() {
@@ -13,6 +14,7 @@ function AppRoutes() {
       <Route path="/" element={<SiteLayout />}>
         <Route index element={<InfoPage />} />
         <Route path="home" element={<HomePage />} />
+        <Route path="interview-context" element={<InterviewContextPage />} />
         <Route path="camera" element={<CameraPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
