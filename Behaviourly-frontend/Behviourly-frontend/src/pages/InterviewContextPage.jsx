@@ -94,7 +94,7 @@ export default function InterviewContextPage() {
         <button
           type="button"
           className="interview-context-primary"
-          onClick={() => navigate("/camera", { state: { company: companyName, role: roleTitle } })}
+          onClick={() => navigate("/interview", { state: { company: companyName, role: roleTitle } })}
         >
           Start Practice Interview
         </button>

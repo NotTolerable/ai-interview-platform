@@ -23,7 +23,11 @@ app.add_middleware(
 # Configure Gemini
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
-MODEL = "gemini-2.5-flash-preview-04-17"
+# Default model for deeper analysis endpoints (report, answer analysis, etc.)
+MODEL = "gemini-3.1-pro-preview"
+
+# Faster, lighter model for quick question generation.
+QUESTION_MODEL = "gemini-3.1-flash-lite-preview"
 
 #how are we gonna score them
 SCORING_RULES = {
@@ -70,7 +74,7 @@ async def mock_interview(body: dict):
     """
     try:
         response = client.models.generate_content(
-            model="gemini-3.1-pro-preview",
+            model=QUESTION_MODEL,
             contents=prompt
         )
         text = response.text.strip().replace("```json", "").replace("```", "")
