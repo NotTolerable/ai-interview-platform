@@ -112,8 +112,17 @@ async def generate_interview_context(
     prompt = build_prompt(payload)
 
     try:
-        # google.generativeai generate_content is sync, so keep FastAPI event loop cleaner
-        response = await asyncio.to_thread(model.generate_content, prompt)
+        # generate_content is sync for most Gemini SDK clients/models; use a thread
+        if hasattr(model, "generate_content"):
+            response = await asyncio.to_thread(model.generate_content, prompt)
+        elif hasattr(model, "models") and hasattr(model.models, "generate_content"):
+            response = await asyncio.to_thread(
+                model.models.generate_content,
+                model="gemini-2.0-flash-lite",
+                contents=prompt,
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Configured Gemini model is invalid")
 
         raw_text = getattr(response, "text", None)
         if not raw_text:
