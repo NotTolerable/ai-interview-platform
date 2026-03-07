@@ -22,7 +22,7 @@ app.include_router(interview_context_router)
 
 # Configure Gemini
 client = genai.Client(api_key="AIzaSyDgSDjEuMgYk6eaPOvBdjcpc2gp4POwUrM")
-
+app.state.gemini_model = client
 
 #how are we gonna score them
 SCORING_RULES = {
