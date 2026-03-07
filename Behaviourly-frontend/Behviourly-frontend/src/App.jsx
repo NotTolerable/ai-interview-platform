@@ -4,9 +4,11 @@ import SiteLayout from "./components/SiteLayout";
 import InfoPage from "./pages/InfoPage";
 import HomePage from "./pages/HomePage";
 import CameraPage from "./pages/CameraPage";
+import CameraSummaryPage from "./pages/CameraSummaryPage";
 import ProfilePage from "./pages/ProfilePage";
 import InterviewContextPage from "./pages/InterviewContextPage";
 import "./App.css";
+import Interview from './Interveiw'
 
 function AppRoutes() {
   return (
@@ -16,7 +18,9 @@ function AppRoutes() {
         <Route path="home" element={<HomePage />} />
         <Route path="interview-context" element={<InterviewContextPage />} />
         <Route path="camera" element={<CameraPage />} />
+        <Route path="camera/summary" element={<CameraSummaryPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="interview" element={<Interview />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -47,5 +51,6 @@ function App() {
     </Auth0Provider>
   );
 }
+
 
 export default App;

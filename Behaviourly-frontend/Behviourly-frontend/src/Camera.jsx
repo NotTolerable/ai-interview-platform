@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import "./Camera.css";
 
 export default function Camera({ onRecordingComplete }) {
   const videoRef = useRef(null);
@@ -9,12 +10,21 @@ export default function Camera({ onRecordingComplete }) {
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState(null);
 
-  // ─────────────────────────────────────────────
-  // Start camera on mount
-  // ─────────────────────────────────────────────
   useEffect(() => {
     startCamera();
     return () => stopCamera();
+  }, []);
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      console.log("[Camera] visibilitychange:", document.visibilityState, "MediaRecorder state:", mediaRecorderRef.current?.state);
+      if (document.visibilityState === "hidden" && mediaRecorderRef.current?.state === "recording") {
+        console.log("[Camera] tab hidden while recording -> stopping");
+        stopRecording();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   async function startCamera() {
@@ -35,13 +45,16 @@ export default function Camera({ onRecordingComplete }) {
   function stopCamera() {
     const stream = videoRef.current?.srcObject;
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      const tracks = stream.getTracks();
+      console.log("[Camera] stopCamera: stopping", tracks.length, "tracks");
+      tracks.forEach((track) => {
+        console.log("[Camera] stopping track:", track.kind, track.readyState);
+        track.stop();
+      });
+      if (videoRef.current) videoRef.current.srcObject = null;
     }
   }
 
-  // ─────────────────────────────────────────────
-  // Start recording
-  // ─────────────────────────────────────────────
   function startRecording() {
     const stream = videoRef.current.srcObject;
     chunksRef.current = [];
@@ -55,8 +68,10 @@ export default function Camera({ onRecordingComplete }) {
     };
 
     mediaRecorder.onstop = () => {
+      console.log("[Camera] MediaRecorder onstop fired");
       const blob = new Blob(chunksRef.current, { type: "video/webm" });
       const url = URL.createObjectURL(blob);
+      stopCamera();
       if (onRecordingComplete) onRecordingComplete(blob, url);
     };
 
@@ -65,110 +80,60 @@ export default function Camera({ onRecordingComplete }) {
     setRecording(true);
   }
 
-  // ─────────────────────────────────────────────
-  // Stop recording
-  // ─────────────────────────────────────────────
   function stopRecording() {
-    mediaRecorderRef.current?.stop();
-    setRecording(false);
+    const mr = mediaRecorderRef.current;
+    console.log("[Camera] stopRecording called, MediaRecorder state:", mr?.state);
+    if (mr?.state === "recording") {
+      stopCamera();
+      mr.stop();
+      setRecording(false);
+    }
   }
 
   if (error) {
     return (
-      <div style={styles.error}>
+      <div className="camera-block__error">
         <p>{error}</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      {/* Live camera feed */}
-      <video ref={videoRef} muted playsInline style={styles.video} />
+    <div className="camera-block">
+      <video
+        ref={videoRef}
+        muted
+        playsInline
+        className="camera-block__video"
+      />
 
-      {/* Recording indicator */}
       {recording && (
-        <div style={styles.recordingBadge}>🔴 Recording</div>
+        <div className="camera-block__recording-badge">
+          <span className="camera-block__recording-dot" />
+          Recording
+        </div>
       )}
 
-      {/* Controls */}
-      <div style={styles.controls}>
+      <div className="camera-block__controls">
         {!recording ? (
           <button
+            type="button"
+            className="camera-block__btn camera-block__btn--start"
             onClick={startRecording}
             disabled={!cameraReady}
-            style={styles.startBtn}
           >
-            {cameraReady ? "Start Interview" : "Loading camera..."}
+            {cameraReady ? "Start interview" : "Loading camera…"}
           </button>
         ) : (
-          <button onClick={stopRecording} style={styles.stopBtn}>
-            Stop Interview
+          <button
+            type="button"
+            className="camera-block__btn camera-block__btn--stop"
+            onClick={stopRecording}
+          >
+            Stop interview
           </button>
         )}
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    position: "relative",
-    width: "100%",
-    maxWidth: "720px",
-    margin: "0 auto",
-    borderRadius: "12px",
-    overflow: "hidden",
-    background: "#000",
-  },
-  video: {
-    width: "100%",
-    display: "block",
-    borderRadius: "12px",
-  },
-  recordingBadge: {
-    position: "absolute",
-    top: "12px",
-    left: "12px",
-    background: "rgba(0,0,0,0.6)",
-    color: "white",
-    padding: "4px 12px",
-    borderRadius: "20px",
-    fontSize: "14px",
-    fontWeight: "bold",
-  },
-  controls: {
-    position: "absolute",
-    bottom: "16px",
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-  },
-  startBtn: {
-    background: "#4CAF50",
-    color: "white",
-    border: "none",
-    padding: "12px 32px",
-    borderRadius: "8px",
-    fontSize: "16px",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  stopBtn: {
-    background: "#f44336",
-    color: "white",
-    border: "none",
-    padding: "12px 32px",
-    borderRadius: "8px",
-    fontSize: "16px",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  error: {
-    background: "#ffebee",
-    color: "#c62828",
-    padding: "20px",
-    borderRadius: "12px",
-    textAlign: "center",
-  },
-};
