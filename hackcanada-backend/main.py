@@ -6,6 +6,9 @@ import os
 import json
 from typing import Optional
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -18,8 +21,9 @@ app.add_middleware(
 )
 
 # Configure Gemini
-client = genai.Client(api_key="AIzaSyB1qnZ_QufzHk8QUuOP-R-oVbZo3fw3kuo")
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
+MODEL = "gemini-2.5-flash-preview-04-17"
 
 #how are we gonna score them
 SCORING_RULES = {
@@ -37,6 +41,20 @@ SCORING_RULES = {
 session_log = []
 
 
+def _get_tip(triggered: list) -> Optional[str]:
+    if "eye_contact_lost" in triggered:
+        return "Look at the camera 👀"
+    if "filler_word" in triggered:
+        return "Take a breath before answering 🧘"
+    if "high_stress" in triggered:
+        return "Slow down, you've got this 💪"
+    if "low_focus" in triggered:
+        return "Stay present, almost there 🎯"
+    if "weak_answer" in triggered:
+        return "Use a concrete example next time 💡"
+    return None
+
+
 
 #generating a mock interview
 @app.post("/mock-interview")
@@ -52,7 +70,8 @@ async def mock_interview(body: dict):
     """
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash-lite", contents=prompt
+            model="gemini-3.1-pro-preview",
+            contents=prompt
         )
         text = response.text.strip().replace("```json", "").replace("```", "")
         questions = json.loads(text)
@@ -78,7 +97,7 @@ async def analyze_answer(body: dict):
     }}
     """
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=MODEL, contents=prompt)
         text = response.text.strip().replace("```json", "").replace("```", "")
         result = json.loads(text)
         rating = result.get("rating", "mediocre")
@@ -130,7 +149,7 @@ async def lowlight_reel(body: dict):
     If there are no lowlight moments, return an empty array: []
     """
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=MODEL, contents=prompt)
         text = response.text.strip().replace("```json", "").replace("```", "")
         reel = json.loads(text)
         return JSONResponse({"lowlights": reel, "total": len(reel)})
@@ -160,7 +179,7 @@ async def generate_report(body: dict):
     }}
     """
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=MODEL, contents=prompt)
         text = response.text.strip().replace("```json", "").replace("```", "")
         report = json.loads(text)
         return JSONResponse(report)
@@ -173,10 +192,7 @@ async def reset_session():
     return JSONResponse({"status": "session cleared"})
 
 
-# ─────────────────────────────────────────────
-# 7. WebSocket — real-time score stream to React
-# WS /ws/live
-# ─────────────────────────────────────────────
+#connection to our react app
 @app.websocket("/ws/live")
 async def websocket_live(websocket: WebSocket):
     await websocket.accept()
