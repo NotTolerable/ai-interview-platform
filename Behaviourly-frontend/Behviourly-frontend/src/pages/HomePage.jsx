@@ -88,7 +88,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   className="home-card-practice"
-                  onClick={() => navigate("/camera", { state: { company: job.company, role: job.role } })}
+                  onClick={() => navigate("/interview-context", { state: { company: job.company, role: job.role } })}
                 >
                   Practice
                 </button>
