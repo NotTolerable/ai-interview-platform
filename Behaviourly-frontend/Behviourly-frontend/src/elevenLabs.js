@@ -1,27 +1,15 @@
-const VOICE_ID = "JBFqnCBsd6RMkjVDRZzb" // George — sounds professional
+/**
+ * Text-to-speech for interview questions.
+ * Uses the browser's Speech Synthesis API (no API key required).
+ * Replace with ElevenLabs API when you have credentials.
+ */
+export function speakText(text) {
+  if (!text || typeof text !== "string") return;
+  if (!("speechSynthesis" in window)) return;
 
-export async function speakText(text) {
-  const response = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": import.meta.env.VITE_ELEVENLABS_API_KEY,
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_monolingual_v1",
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-        },
-      }),
-    }
-  )
-
-  const blob = await response.blob()
-  const url = URL.createObjectURL(blob)
-  const audio = new Audio(url)
-  audio.play()
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
 }

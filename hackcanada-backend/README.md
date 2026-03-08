@@ -1,8 +1,23 @@
-# Backend
+# HackCanada Backend
 
-## Login (Auth server) — required for "Try it for free"
+## Mock interview API (FastAPI)
 
-The Auth server serves `/login` and `/callback` for Google sign-in. **It must be running** or you’ll get “localhost sent an invalid response” when the app redirects to login.
+The **mock-interview** and related endpoints (question generation, answer analysis, etc.) are in **main.py**. You need this server running for the Behaviourly frontend interview flow to work.
+
+**Run it:**
+
+```bash
+cd hackcanada-backend
+uvicorn main:app --reload --port 8001
+```
+
+Keep this terminal open. The frontend is configured to call `http://localhost:8001` for the API (see `VITE_API_BASE_URL` in the frontend `.env`).
+
+**Requirements:** Python 3.10+, and a `.env` in this folder or the repo root with `GEMINI_API_KEY` set.
+
+## Auth (Flask, optional)
+
+The Auth server serves `/login` and `/callback` for Google sign-in. **It must be running** for "Try it for free" or you’ll get "localhost sent an invalid response" when the app redirects to login.
 
 1. **Create `.env`** from the example:
    ```bash
@@ -19,14 +34,9 @@ The Auth server serves `/login` and `/callback` for Google sign-in. **It must be
    ```bash
    python Auth.py
    ```
-   You should see a log like: `Auth server starting at http://localhost:5000 — login: ... callback: ...`
 
 4. **Use a different port** (e.g. if 5000 is in use):
    ```bash
    PORT=5001 python Auth.py
    ```
-   Then in `.env` set `REDIRECT_URI=http://localhost:5001/callback` and add that exact URL to Auth0 **Allowed Callback URLs**. In the frontend `.env` set `VITE_API_URL=http://localhost:5001`.
-
-5. **Auth0 (fixes 403)**: With the Auth server running, open **http://localhost:5000/auth/config** and copy the `redirect_uri` value. In Auth0 → Application → Settings → **Allowed Callback URLs**, add that exact string. Add your frontend URL to **Allowed Logout URLs** and **Allowed Web Origins**.
-
-Once the Auth server is running, “Try it for free” should redirect to login and back correctly.
+   Then in `.env` set `REDIRECT_URI=http://localhost:5001/callback` and add that URL to Auth0 **Allowed Callback URLs**.

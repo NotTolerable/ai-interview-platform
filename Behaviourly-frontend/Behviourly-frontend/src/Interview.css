@@ -34,6 +34,14 @@
   color: #0f172a;
 }
 
+.interview-api-error {
+  padding: 0.75rem 1rem;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
 .interview-actions {
   display: flex;
   gap: 0.75rem;

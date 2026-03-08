@@ -4,6 +4,14 @@ import Camera from "./Camera"
 import { speakText } from "./elevenLabs"
 import "./Interview.css"
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+
+const FALLBACK_QUESTIONS = [
+  "Tell me about yourself.",
+  "Describe a challenge you overcame at work.",
+  "Where do you see yourself in five years?",
+]
+
 export default function Interview() {
   const { state } = useLocation()
   const company = state?.company
@@ -12,32 +20,35 @@ export default function Interview() {
   const [questions, setQuestions] = useState([])
   const [currentQ, setCurrentQ] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [apiError, setApiError] = useState(null)
   const [started, setStarted] = useState(false)
   const [ended, setEnded] = useState(false)
   const cameraRef = useRef(null)
 
   // Fetch 3 short, realistic questions for this company and role
   useEffect(() => {
-    setError(null)
-    fetch("http://127.0.0.1:8000/mock-interview", {
+    fetch(`${API_BASE_URL}/reset-session`, { method: "POST" }).catch(() => {})
+
+    fetch(`${API_BASE_URL}/mock-interview`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, company: company || undefined, num_questions: 3 })
+      body: JSON.stringify({ role, company: company || undefined, num_questions: 3 }),
     })
-      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data }) => {
-        if (!ok) {
-          setError(data?.error || data?.detail || "Backend error")
-          setQuestions([])
+        if (ok && Array.isArray(data?.questions) && data.questions.length > 0) {
+          setQuestions(data.questions)
+          setApiError(null)
         } else {
-          setQuestions(Array.isArray(data.questions) ? data.questions : [])
+          setQuestions(FALLBACK_QUESTIONS)
+          setApiError(data?.error || "Using default questions.")
         }
         setLoading(false)
       })
-      .catch(err => {
-        setError(err.message || "Failed to connect. Is the backend running on port 8000?")
-        setQuestions([])
+      .catch((err) => {
+        console.error("Mock interview fetch failed:", err)
+        setQuestions(FALLBACK_QUESTIONS)
+        setApiError("Could not reach the server. Using default questions.")
         setLoading(false)
       })
   }, [company, role])
@@ -74,8 +85,8 @@ export default function Interview() {
       <div className="interview-page">
         <div className="interview-error-box">
           <strong>No questions loaded</strong>
-          {error && <p className="interview-error-text">{error}</p>}
-          <p className="interview-error-hint">Make sure the backend is running on port 8000 and GEMINI_API_KEY is set in hackcanada-backend/.env</p>
+          {apiError && <p className="interview-error-text">{apiError}</p>}
+          <p className="interview-error-hint">Make sure the backend is running and GEMINI_API_KEY is set in hackcanada-backend/.env</p>
         </div>
       </div>
     )
@@ -88,6 +99,10 @@ export default function Interview() {
         <span className="interview-label">Practicing for</span>
         <span className="interview-context">{company && role ? `${company} · ${role}` : role}</span>
       </div>
+
+      {apiError && (
+        <div className="interview-api-error">{apiError}</div>
+      )}
 
       {/* Questions — only visible after Start interview */}
       {started && !complete && (
