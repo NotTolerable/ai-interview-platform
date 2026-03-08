@@ -49,6 +49,7 @@ from Auth import (
     User,
     Interview,
     InterviewQuestion,
+    InterviewContext,
     get_google_token_for_user,
 )
 
@@ -194,7 +195,7 @@ If this IS an interview invitation or scheduling email:
     "role": "job title/role",
     "interview_date": "date and time if mentioned, otherwise null",
     "interview_type": "behavioral/technical/phone screen/onsite/panel/unknown",
-    "summary": "brief 1-2 sentence summary of what the email says"
+    "summary": "A brief 1-2 sentence summary of the email, written in the second person (Omit time and date details)"
 }}
 
 If this is NOT an interview invitation (e.g. marketing, newsletter, job board alert, rejection):
@@ -265,6 +266,56 @@ Each item should have:
     except (json.JSONDecodeError, Exception) as e:
         logger.error(f"Gemini question generation failed for {company} / {role}: {e}")
         return []
+
+
+def generate_interview_context(company: str, role: str, interview_type: str) -> dict | None:
+    """
+    Ask Gemini to generate a full interview briefing: company overview,
+    values, job description, skills, tailored tips, and a confidence note.
+    """
+    prompt = f"""You are preparing an interview briefing for a candidate applying to a
+{role} position at {company}. The interview type is: {interview_type}.
+
+Research what you know about {company} and generate a comprehensive briefing.
+
+Respond ONLY with a JSON object, no markdown, no backticks, no extra text:
+{{
+    "company_name": "{company}",
+    "company_summary": "2-3 sentence overview of what {company} does, its industry, size, and reputation",
+    "company_values": ["value1", "value2", "value3", "value4", "value5"],
+    "role_title": "{role}",
+    "job_description": "A realistic 2-3 sentence description of what this role typically involves at {company} or similar companies",
+    "skills_emphasized": ["skill1", "skill2", "skill3", "skill4", "skill5"],
+    "tailored_tips": [
+        "One short, punchy sentence with an actionable tip for {company} (max 15 words)",
+        "A brief, single-sentence tip about {company}'s interview culture",
+        "A concise, fast-read tip on demonstrating the right skills"
+    ],
+    "confidence_note": "A brief disclaimer noting this briefing is AI-generated based on publicly available information and may not reflect the exact current state of the company or role."
+}}
+
+Make the values, skills, and tips specific to {company} and the {role} role — avoid generic advice.
+Each tip should be 1-2 sentences of concrete, actionable guidance."""
+
+    try:
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=prompt,
+        )
+        text = response.text.strip()
+
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+
+        result = json.loads(text)
+        return result
+
+    except (json.JSONDecodeError, Exception) as e:
+        logger.error(f"Gemini context generation failed for {company} / {role}: {e}")
+        return None
 
 
 def scan_user(user: User, db) -> int:
@@ -339,6 +390,31 @@ def scan_user(user: User, db) -> int:
                 category     = q.get("category"),
                 tip          = q.get("tip"),
             ))
+
+        # Generate interview context briefing
+        logger.info(f"    Generating interview context briefing...")
+        context = generate_interview_context(
+            analysis["company"],
+            analysis["role"],
+            analysis.get("interview_type", "behavioral"),
+        )
+
+        if context:
+            db.add(InterviewContext(
+                id                = str(uuid.uuid4()),
+                interview_id      = email["id"],
+                company_name      = context.get("company_name", analysis["company"]),
+                company_summary   = context.get("company_summary"),
+                company_values    = json.dumps(context.get("company_values", [])),
+                role_title        = context.get("role_title", analysis["role"]),
+                job_description   = context.get("job_description"),
+                skills_emphasized = json.dumps(context.get("skills_emphasized", [])),
+                tailored_tips     = json.dumps(context.get("tailored_tips", [])),
+                confidence_note   = context.get("confidence_note"),
+            ))
+            logger.info(f"    Saved interview context briefing.")
+        else:
+            logger.warning(f"    Could not generate context briefing — skipping.")
 
         db.commit()
         new_count += 1

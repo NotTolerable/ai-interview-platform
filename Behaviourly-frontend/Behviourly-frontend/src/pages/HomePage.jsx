@@ -3,6 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
 import "./HomePage.css";
 
+const CARD_IMAGES = [
+  "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&q=80",
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80",
+  "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&q=80"
+];
+
 function formatDate() {
   return new Date().toLocaleDateString("en-US", {
     year: "numeric", month: "long", day: "numeric",
@@ -36,14 +42,14 @@ export default function HomePage() {
     }
   }, [user, userLoading]);
 
-if (userLoading || dataLoading) {
-  return (
-    <div className="loading-container">
-      <div className="spinner"></div>
-      <p>Loading your dashboard...</p>
-    </div>
-  );
-}
+  if (userLoading || dataLoading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Loading your dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="home-page">
@@ -80,33 +86,44 @@ if (userLoading || dataLoading) {
           </div>
         ) : (
           <ul className="home-cards">
-            {interviews.map((job, i) => (
-              <li key={job.id} className="home-card" style={{ animationDelay: `${0.1 * i}s` }}>
-                <div className="home-card-image company-placeholder">
-                   {/* You can use a generic placeholder or dynamic icons here */}
-                   <div className="home-card-overlay">
-                    <span className="home-card-company">{job.company}</span>
-                    <span className="home-card-role">{job.role}</span>
+            {interviews.map((job, i) => {
+              // Cycle through the 3 images based on the index
+              const imageUrl = CARD_IMAGES[i % CARD_IMAGES.length];
+              
+              return (
+                <li key={job.id} className="home-card" style={{ animationDelay: `${0.1 * i}s` }}>
+                  <div 
+                    className="home-card-image company-placeholder"
+                    style={{ 
+                      backgroundImage: `url(${imageUrl})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  >
+                     <div className="home-card-overlay">
+                      <span className="home-card-company">{job.company}</span>
+                      <span className="home-card-role">{job.role}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="home-card-body">
-                  <p className="home-card-blurb">
-                    {job.summary || `AI has prepared questions for your ${job.role} role at ${job.company}.`}
-                  </p>
-                  <div className="home-card-meta">
-                    <span>{job.interview_date || "Date TBD"}</span>
-                    <span className="type-tag">{job.interview_type}</span>
+                  <div className="home-card-body">
+                    <p className="home-card-blurb">
+                      {job.summary || `AI has prepared questions for your ${job.role} role at ${job.company}.`}
+                    </p>
+                    <div className="home-card-meta">
+                      <span>{job.interview_date || "Date TBD"}</span>
+                      <span className="type-tag">{job.interview_type}</span>
+                    </div>
+                      <button
+                        type="button"
+                        className="home-card-practice"
+                        onClick={() => navigate("/interview-context", { state: { interviewId: job.id, company: job.company, role: job.role } })}
+                      >
+                        View Prep Kit
+                      </button>
                   </div>
-                    <button
-                      type="button"
-                      className="home-card-practice"
-                      onClick={() => navigate("/interview-context", { state: { interviewId: job.id, company: job.company, role: job.role } })}
-                    >
-                      View Prep Kit
-                    </button>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

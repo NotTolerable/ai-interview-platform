@@ -7,7 +7,7 @@ const FALLBACK_REQUEST_INPUTS = {
   role: "Unknown Role",
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 function SectionList({ title, items = [] }) {
   return (
@@ -28,6 +28,7 @@ export default function InterviewContextPage() {
 
   const company = state?.company || FALLBACK_REQUEST_INPUTS.company;
   const role = state?.role || FALLBACK_REQUEST_INPUTS.role;
+  const interviewId = state?.interviewId;
 
   const [briefing, setBriefing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,18 +41,20 @@ export default function InterviewContextPage() {
       setLoading(true);
       setError("");
 
+      if (!interviewId) {
+        setError("No interview selected.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/interview_context`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            company_name: company,
-            role_title: role,
-            job_description: null,
-          }),
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/interviews/${interviewId}/context`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to fetch interview context (${response.status})`);
@@ -78,8 +81,32 @@ export default function InterviewContextPage() {
     return () => {
       isMounted = false;
     };
-  }, [company, role]);
+  }, [interviewId]);
 
+  // ─── 1. Early Return: Consistent Loading State ─────────────────────────
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Preparing your briefing for {company}...</p>
+      </div>
+    );
+  }
+
+  // ─── 2. Early Return: Error State ──────────────────────────────────────
+  if (error) {
+    return (
+      <div className="interview-context-page" style={{ textAlign: 'center', paddingTop: '10vh' }}>
+        <h2>Unable to Load Briefing</h2>
+        <p>{error}</p>
+        <button type="button" onClick={() => navigate("/home")} style={{ marginTop: '20px' }}>
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  // ─── 3. Fully Loaded State ─────────────────────────────────────────────
   const generatedJobDescription =
     briefing?.job_description ||
     `This ${briefing?.role?.title || role} role at ${briefing?.company?.name || company} is being summarized for interview preparation.`;
@@ -105,52 +132,26 @@ export default function InterviewContextPage() {
         </div>
       </section>
 
-      {loading && (
-        <section className="interview-context-card">
-          <h3>Loading Briefing</h3>
-          <p>Generating tailored interview context...</p>
-        </section>
-      )}
+      <section className="interview-context-card">
+        <h3>Job Description</h3>
+        <p>{generatedJobDescription}</p>
+      </section>
 
-      {error && (
-        <>
-          <section className="interview-context-card">
-            <h3>Unable to Load Briefing</h3>
-            <p>{error}</p>
-          </section>
+      <section className="interview-context-card">
+        <h3>Company Summary</h3>
+        <p>{briefing?.company?.summary}</p>
+      </section>
 
-          <div className="interview-context-grid">
-            <SectionList title="Key Values" items={["Unable to fetch key values"]} />
-            <SectionList title="Emphasized Skills" items={["Unable to fetch required skills"]} />
-            <SectionList title="Tailored Tips" items={["Unable to fetch tailored tips"]} />
-          </div>
-        </>
-      )}
-      
-      {!loading && !error && briefing && (
-        <>
-          <section className="interview-context-card">
-            <h3>Job Description</h3>
-            <p>{generatedJobDescription}</p>
-          </section>
+      <div className="interview-context-grid">
+        <SectionList title="Key Values" items={briefing?.company?.values} />
+        <SectionList title="Emphasized Skills" items={briefing?.skills_emphasized} />
+        <SectionList title="Tailored Tips" items={briefing?.tailored_tips} />
+      </div>
 
-          <section className="interview-context-card">
-            <h3>Company Summary</h3>
-            <p>{briefing.company?.summary}</p>
-          </section>
-
-          <div className="interview-context-grid">
-            <SectionList title="Key Values" items={briefing.company?.values} />
-            <SectionList title="Emphasized Skills" items={briefing.skills_emphasized} />
-            <SectionList title="Tailored Tips" items={briefing.tailored_tips} />
-          </div>
-
-          <section className="interview-context-card">
-            <h3>Confidence Note</h3>
-            <p>{briefing.confidence_note}</p>
-          </section>
-        </>
-      )}
+      <section className="interview-context-card">
+        <h3>Confidence Note</h3>
+        <p>{briefing?.confidence_note}</p>
+      </section>
 
       <div className="interview-context-actions">
         <button type="button" onClick={() => navigate("/home")}>

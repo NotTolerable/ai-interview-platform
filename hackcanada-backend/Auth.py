@@ -48,7 +48,7 @@ from datetime import datetime, timezone
 
 from flask import Flask, request, redirect, session, jsonify
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, Column, String, DateTime, Boolean
+from sqlalchemy import create_engine, Column, String, Text, DateTime, Boolean
 from sqlalchemy.orm import declarative_base, sessionmaker
 from flask_cors import CORS
 
@@ -72,7 +72,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-in-prod")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 CORS(app, supports_credentials=True, origins=[
-    "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175"
+    "http://localhost:5173"
 ])
 
 AUTH0_DOMAIN        = os.getenv("AUTH0_DOMAIN")         # e.g. dev-xxxx.us.auth0.com
@@ -135,6 +135,22 @@ class InterviewQuestion(Base):
     category      = Column(String, nullable=True)           # e.g. "leadership", "teamwork", "conflict"
     tip           = Column(String, nullable=True)           # advice for answering
     created_at    = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class InterviewContext(Base):
+    __tablename__ = "interview_contexts"
+
+    id                = Column(String, primary_key=True)       # generated uuid
+    interview_id      = Column(String, nullable=False, unique=True)  # references interviews.id
+    company_name      = Column(String)
+    company_summary   = Column(Text)                          # 2-3 sentence company overview
+    company_values    = Column(Text)                          # JSON array of core values
+    role_title        = Column(String)
+    job_description   = Column(Text)                          # generated JD summary
+    skills_emphasized = Column(Text)                          # JSON array of key skills
+    tailored_tips     = Column(Text)                          # JSON array of tips
+    confidence_note   = Column(Text)                          # caveat about AI-generated info
+    created_at        = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 engine = create_engine(DATABASE_URL)
@@ -409,14 +425,19 @@ def get_interviews():
     if not user_session:
         return jsonify({"error": "Not authenticated."}), 401
 
+    full_sub = user_session["sub"]  # e.g., "google-oauth2|12345"
+    raw_id = full_sub.split("|")[-1] if "|" in full_sub else full_sub # e.g., "12345"
+
     db = SessionLocal()
     try:
+        # Search for interviews matching EITHER the full Auth0 ID or the raw ID
         interviews = (
             db.query(Interview)
-            .filter_by(user_id=user_session["sub"])
+            .filter(Interview.user_id.in_([full_sub, raw_id]))
             .order_by(Interview.created_at.desc())
             .all()
         )
+        
         return jsonify([
             {
                 "id":             i.id,
@@ -473,6 +494,56 @@ def get_interview_questions(interview_id):
                 }
                 for q in questions
             ],
+        })
+    finally:
+        db.close()
+
+
+def require_auth(f):
+    """Decorator: returns 401 if user is not logged in."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return jsonify({"error": "Not authenticated."}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+# ─── Route: GET /interviews/<id>/context ────────────────────────────────────
+# Returns the pre-generated interview briefing (company summary, values,
+# skills, tips) for the InterviewContextPage.
+
+@app.route("/interviews/<interview_id>/context")
+@require_auth
+def get_interview_context(interview_id):
+    user_session = session.get("user")
+    if not user_session:
+        return jsonify({"error": "Not authenticated."}), 401
+
+    db = SessionLocal()
+    try:
+        # 1. Broaden the search to handle the prefix mismatch
+        user_id = user_session["sub"]
+        
+        # 2. Check if the context exists specifically for this interview
+        ctx = db.query(InterviewContext).filter_by(interview_id=interview_id).first()
+        
+        if not ctx:
+            return jsonify({"error": "Context record not found in database."}), 404
+
+        # 3. Return the data (Scanner.py saves these as JSON strings, so we decode them)
+        return jsonify({
+            "company": {
+                "name":    ctx.company_name,
+                "summary": ctx.company_summary,
+                "values":  json.loads(ctx.company_values or "[]"),
+            },
+            "role": {
+                "title": ctx.role_title,
+            },
+            "job_description":   ctx.job_description,
+            "skills_emphasized": json.loads(ctx.skills_emphasized or "[]"),
+            "tailored_tips":     json.loads(ctx.tailored_tips or "[]"),
+            "confidence_note":   ctx.confidence_note,
         })
     finally:
         db.close()
@@ -571,16 +642,6 @@ def generate_interview_questions(interview_id):
         })
     finally:
         db.close()
-
-
-def require_auth(f):
-    """Decorator: returns 401 if user is not logged in."""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if "user" not in session:
-            return jsonify({"error": "Not authenticated."}), 401
-        return f(*args, **kwargs)
-    return decorated
 
 def get_google_token_for_user(auth0_id: str) -> str | None:
     """
