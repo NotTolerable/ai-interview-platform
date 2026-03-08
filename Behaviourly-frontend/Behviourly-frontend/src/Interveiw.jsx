@@ -25,7 +25,11 @@ export default function Interview() {
   const [ended, setEnded] = useState(false)
   const cameraRef = useRef(null)
 
+<<<<<<< HEAD
   // Fetch 3 short, realistic questions for this company and role
+=======
+  // Fetch questions for this company and role
+>>>>>>> a042f585fc6bcf6de42f3ab70b0a6f461792996c
   useEffect(() => {
     fetch(`${API_BASE_URL}/reset-session`, { method: "POST" }).catch(() => {})
 
@@ -73,12 +77,20 @@ export default function Interview() {
   }
 
   function handleRecordingComplete(blob, url) {
+<<<<<<< HEAD
     // Recording stopped — blob can be processed/uploaded here. Advancement is handled by the Next Question button.
+=======
+    // Recording stopped — advancement is handled by Next Question button
+>>>>>>> a042f585fc6bcf6de42f3ab70b0a6f461792996c
   }
 
   const complete = ended || currentQ >= questions.length
 
+<<<<<<< HEAD
   if (loading) return <div className="interview-loading">Generating your interview questions... 🤔</div>
+=======
+  if (loading) return <div className="interview-loading">Generating your interview questions...</div>
+>>>>>>> a042f585fc6bcf6de42f3ab70b0a6f461792996c
 
   if (questions.length === 0) {
     return (
@@ -100,9 +112,13 @@ export default function Interview() {
         <span className="interview-context">{company && role ? `${company} · ${role}` : role}</span>
       </div>
 
+<<<<<<< HEAD
       {apiError && (
         <div className="interview-api-error">{apiError}</div>
       )}
+=======
+      {apiError && <div className="interview-api-error">{apiError}</div>}
+>>>>>>> a042f585fc6bcf6de42f3ab70b0a6f461792996c
 
       {/* Questions — only visible after Start interview */}
       {started && !complete && (

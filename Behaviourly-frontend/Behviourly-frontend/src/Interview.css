@@ -42,6 +42,7 @@
   font-size: 0.9rem;
 }
 
+<<<<<<< HEAD
 .interview-actions {
   display: flex;
   gap: 0.75rem;
@@ -86,6 +87,8 @@
 }
 
 /* Questions block — one at a time */
+=======
+>>>>>>> a042f585fc6bcf6de42f3ab70b0a6f461792996c
 .interview-questions-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -153,6 +156,7 @@
   gap: 0.75rem;
 }
 
+<<<<<<< HEAD
 .interview-next-hint {
   font-size: 0.875rem;
   color: #64748b;
@@ -162,6 +166,38 @@
   border: none;
   color: #fff;
   width: min(100%, 260px);
+=======
+.interview-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.interview-end-btn {
+  border: 1px solid var(--border);
+  color: #475569;
+  background: #fff;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.interview-end-btn:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.interview-start-btn,
+.interview-next-btn {
+  border: none;
+  color: #fff;
+>>>>>>> a042f585fc6bcf6de42f3ab70b0a6f461792996c
   padding: 1rem 1.5rem;
   font-size: 1rem;
   font-weight: 700;
@@ -171,6 +207,10 @@
   transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
+<<<<<<< HEAD
+=======
+.interview-start-btn:hover,
+>>>>>>> a042f585fc6bcf6de42f3ab70b0a6f461792996c
 .interview-next-btn:hover {
   opacity: 0.95;
   transform: scale(1.02);

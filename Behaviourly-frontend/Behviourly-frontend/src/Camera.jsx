@@ -17,9 +17,7 @@ const Camera = forwardRef(function Camera({ onRecordingComplete, externalControl
 
   useEffect(() => {
     function handleVisibilityChange() {
-      console.log("[Camera] visibilitychange:", document.visibilityState, "MediaRecorder state:", mediaRecorderRef.current?.state);
       if (document.visibilityState === "hidden" && mediaRecorderRef.current?.state === "recording") {
-        console.log("[Camera] tab hidden while recording -> stopping");
         stopRecording();
       }
     }
@@ -48,34 +46,21 @@ const Camera = forwardRef(function Camera({ onRecordingComplete, externalControl
   function stopCamera() {
     const stream = videoRef.current?.srcObject;
     if (stream) {
-      const tracks = stream.getTracks();
-      console.log("[Camera] stopCamera: stopping", tracks.length, "tracks");
-      tracks.forEach((track) => {
-        console.log("[Camera] stopping track:", track.kind, track.readyState);
-        track.stop();
-      });
+      stream.getTracks().forEach((track) => track.stop());
       if (videoRef.current) videoRef.current.srcObject = null;
     }
   }
 
   function startRecording() {
-    const stream = videoRef.current.srcObject;
-    if (!stream) {
-      console.warn("[Camera] startRecording called but no media stream is attached");
-      return;
-    }
+    const stream = videoRef.current?.srcObject;
+    if (!stream) return;
     chunksRef.current = [];
 
-    const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: "video/webm",
-    });
-
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
-
     mediaRecorder.onstop = () => {
-      console.log("[Camera] MediaRecorder onstop fired");
       const blob = new Blob(chunksRef.current, { type: "video/webm" });
       const url = URL.createObjectURL(blob);
       if (onRecordingComplete) onRecordingComplete(blob, url);
@@ -88,7 +73,6 @@ const Camera = forwardRef(function Camera({ onRecordingComplete, externalControl
 
   function stopRecording() {
     const mr = mediaRecorderRef.current;
-    console.log("[Camera] stopRecording called, MediaRecorder state:", mr?.state);
     if (mr?.state === "recording") {
       mr.stop();
       setRecording(false);
