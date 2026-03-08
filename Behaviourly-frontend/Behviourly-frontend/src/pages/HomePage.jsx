@@ -1,51 +1,42 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../UserContext";
 import "./HomePage.css";
 
-const MOCK_INTERVIEWS = [
-  {
-    id: "1",
-    company: "Google",
-    role: "Software Developer",
-    date: "March 25, 2026",
-    distance: "1.2 miles",
-    image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&q=80",
-    blurb: "Behavioral and technical mix. Practice STAR-format answers and system design basics.",
-  },
-  {
-    id: "2",
-    company: "Shopify",
-    role: "Cloud Engineer",
-    date: "April 12, 2026",
-    distance: "2.1 miles",
-    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80",
-    blurb: "Focus on ownership and scaling. Expect questions on reliability and past projects.",
-  },
-  {
-    id: "3",
-    company: "Meta",
-    role: "Frontend Engineer",
-    date: "April 20, 2026",
-    distance: "0.8 miles",
-    image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&q=80",
-    blurb: "Culture-fit and impact. Be ready to discuss tradeoffs and working with cross-functional teams.",
-  },
-];
-
 function formatDate() {
   return new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    year: "numeric", month: "long", day: "numeric",
   });
 }
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user, loading } = useUser();
+  const { user, loading: userLoading } = useUser();
+  const [interviews, setInterviews] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Use the name from your Auth0 profile
   const name = user?.name?.split(" ")[0] || "there";
 
-  if (loading) return <div>Loading...</div>;
+  useEffect(() => {
+    // Only fetch if we have a user session
+    if (!userLoading && user) {
+      fetch("http://localhost:8000/interviews", { 
+        credentials: "include" // Required for Flask session cookies
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) setInterviews(data);
+          setDataLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch interviews:", err);
+          setDataLoading(false);
+        });
+    }
+  }, [user, userLoading]);
+
+  if (userLoading || dataLoading) return <div className="loading">Loading your dashboard...</div>;
 
   return (
     <div className="home-page">
@@ -56,48 +47,51 @@ export default function HomePage() {
           <div className="home-meta">
             <span>{formatDate()}</span>
             <span className="home-meta-dot">·</span>
-            <span>{MOCK_INTERVIEWS.length} interviews in the pipeline</span>
+            <span>{interviews.length} interviews detected</span>
           </div>
         </div>
         {user?.picture && (
           <div className="home-avatar">
-            <img src={user.picture} alt="" />
+            <img src={user.picture} alt="Profile" />
           </div>
         )}
       </header>
+
       <section className="home-section">
-        <h2 className="home-section-title">Pick a company & start</h2>
-        <ul className="home-cards">
-          {MOCK_INTERVIEWS.map((job, i) => (
-            <li key={job.id} className="home-card" style={{ animationDelay: `${0.1 * i}s` }}>
-              <div
-                className="home-card-image"
-                style={{ backgroundImage: `url(${job.image})` }}
-              >
-                <div className="home-card-overlay">
-                  <span className="home-card-company">{job.company}</span>
-                  <span className="home-card-role">{job.role}</span>
+        <h2 className="home-section-title">Detected Interviews</h2>
+        {interviews.length === 0 ? (
+          <p className="empty-state">No interviews found yet. We're scanning your inbox!</p>
+        ) : (
+          <ul className="home-cards">
+            {interviews.map((job, i) => (
+              <li key={job.id} className="home-card" style={{ animationDelay: `${0.1 * i}s` }}>
+                <div className="home-card-image company-placeholder">
+                   {/* You can use a generic placeholder or dynamic icons here */}
+                   <div className="home-card-overlay">
+                    <span className="home-card-company">{job.company}</span>
+                    <span className="home-card-role">{job.role}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="home-card-body">
-                {job.blurb && (
-                  <p className="home-card-blurb">{job.blurb}</p>
-                )}
-                <div className="home-card-meta">
-                  <span>{job.date}</span>
-                  <span>{job.distance}</span>
+                <div className="home-card-body">
+                  <p className="home-card-blurb">
+                    {job.summary || `AI has prepared questions for your ${job.role} role at ${job.company}.`}
+                  </p>
+                  <div className="home-card-meta">
+                    <span>{job.interview_date || "Date TBD"}</span>
+                    <span className="type-tag">{job.interview_type}</span>
+                  </div>
+                    <button
+                      type="button"
+                      className="home-card-practice"
+                      onClick={() => navigate("/interview-context")}
+                    >
+                      View Prep Kit
+                    </button>
                 </div>
-                <button
-                  type="button"
-                  className="home-card-practice"
-                  onClick={() => navigate("/interview-context", { state: { company: job.company, role: job.role } })}
-                >
-                  Practice
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
