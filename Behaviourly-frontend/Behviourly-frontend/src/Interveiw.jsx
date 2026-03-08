@@ -81,6 +81,7 @@ export default function Interview() {
   function handleRecordingComplete(blob, url) {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     setLastRecordingUrl(url)
   }
 
@@ -104,6 +105,9 @@ export default function Interview() {
 =======
     // Recording stopped — advancement is handled by Next Question button
 >>>>>>> b6807ff (fixing merge issues)
+=======
+    // Recording stopped — advancement is handled by Next Question button
+>>>>>>> d436df0a43213068412401ce2ef57f9d7312fbed
   }
 
   const complete = ended || currentQ >= questions.length
