@@ -33,8 +33,11 @@ export default function Camera({ onRecordingComplete }) {
         video: true,
         audio: true,
       });
-      videoRef.current.srcObject = stream;
-      videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        video.play().catch(() => {});
+      }
       setCameraReady(true);
     } catch (err) {
       setError("Camera access denied. Please allow camera permissions.");

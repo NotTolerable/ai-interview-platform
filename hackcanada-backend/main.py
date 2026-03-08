@@ -1,15 +1,23 @@
-from google import genai
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-import os
+import asyncio
 import json
-from typing import Optional
+import os
 from datetime import datetime
+from typing import Optional
+
 from dotenv import load_dotenv
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from google import genai
+from google.genai import types
+
 from interview_context import router as interview_context_router
 
+# Load .env from current dir, then from repo root (so key works when run from hackcanada-backend/)
 load_dotenv()
+_load_env = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+if os.path.isfile(_load_env):
+    load_dotenv(_load_env)
 
 app = FastAPI()
 
@@ -30,8 +38,8 @@ app.state.gemini_model = client
 # Default model for deeper analysis endpoints (report, answer analysis, etc.)
 MODEL = "gemini-3.1-pro-preview"
 
-# Faster, lighter model for quick question generation.
-QUESTION_MODEL = "gemini-3.1-flash-lite-preview"
+# Fast model for question generation (stable, low latency).
+QUESTION_MODEL = "gemini-2.0-flash"
 
 #how are we gonna score them
 SCORING_RULES = {
@@ -70,16 +78,17 @@ async def mock_interview(body: dict):
     role = body.get("role", "software engineer")
     num_questions = body.get("num_questions", 5)
 
-    prompt = f"""
-    Generate {num_questions} realistic interview questions for a {role} position.
-    Mix behavioral, technical, and situational questions.
-    Return ONLY a JSON array of strings, no extra text, no markdown.
-    Example: ["Tell me about yourself.", "Describe a challenge you overcame."]
-    """
+    prompt = f"""Generate {num_questions} realistic interview questions for a {role} position. Mix behavioral, technical, and situational. Return ONLY a JSON array of strings, no markdown. Example: ["Tell me about yourself.", "Describe a challenge you overcame."]"""
+    config = types.GenerateContentConfig(
+        max_output_tokens=1024,
+        temperature=0.4,
+    )
     try:
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model=QUESTION_MODEL,
-            contents=prompt
+            contents=prompt,
+            config=config,
         )
         text = response.text.strip().replace("```json", "").replace("```", "")
         questions = json.loads(text)

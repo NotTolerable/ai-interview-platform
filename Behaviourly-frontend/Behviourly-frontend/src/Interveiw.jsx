@@ -5,6 +5,12 @@ import { speakText } from "./elevenLabs"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
 
+const FALLBACK_QUESTIONS = [
+  "Tell me about yourself.",
+  "Describe a challenge you overcame at work.",
+  "Where do you see yourself in five years?",
+]
+
 export default function Interview() {
   const { state } = useLocation()
   const company = state?.company
@@ -15,20 +21,32 @@ export default function Interview() {
   const [score, setScore] = useState(100)
   const [tip, setTip] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [apiError, setApiError] = useState(null)
 
   // Reset backend session + fetch questions from backend on load (uses role from InterviewContextPage)
   useEffect(() => {
-    // Clear any previous scoring state on the backend (best-effort).
     fetch(`${API_BASE_URL}/reset-session`, { method: "POST" }).catch(() => {})
 
     fetch(`${API_BASE_URL}/mock-interview`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, company: company || undefined, num_questions: 3 })
+      body: JSON.stringify({ role, company: company || undefined, num_questions: 3 }),
     })
-      .then(res => res.json())
-      .then(data => {
-        setQuestions(data.questions)
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (ok && Array.isArray(data?.questions) && data.questions.length > 0) {
+          setQuestions(data.questions)
+          setApiError(null)
+        } else {
+          setQuestions(FALLBACK_QUESTIONS)
+          setApiError(data?.error || "Using default questions.")
+        }
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error("Mock interview fetch failed:", err)
+        setQuestions(FALLBACK_QUESTIONS)
+        setApiError("Could not reach the server. Using default questions.")
         setLoading(false)
       })
   }, [])
@@ -54,6 +72,11 @@ export default function Interview() {
 
   return (
     <div style={styles.container}>
+      {apiError && (
+        <div style={styles.apiError}>
+          {apiError}
+        </div>
+      )}
       {/* Context header (synced with InterviewContextPage) */}
       {(company || role) && (
         <div style={styles.contextHeader}>
@@ -103,6 +126,7 @@ export default function Interview() {
 
 const styles = {
   container: { maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" },
+  apiError: { padding: "10px 14px", marginBottom: "16px", background: "#fef3c7", color: "#92400e", borderRadius: "8px", fontSize: "14px" },
   contextHeader: { fontSize: "14px", color: "#666", marginBottom: "16px", fontWeight: 500 },
   contextDot: { margin: "0 6px", opacity: 0.6 },
   loading: { textAlign: "center", padding: "40px", fontSize: "20px" },
