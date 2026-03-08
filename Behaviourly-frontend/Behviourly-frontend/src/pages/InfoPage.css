@@ -15,6 +15,18 @@
   to { opacity: 1; }
 }
 
+@keyframes info-float-settle {
+  from {
+    opacity: 0;
+    transform: translateY(26px) rotate(0deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--float-rotation, 0deg));
+  }
+}
+
+
 /* ========== Page ========== */
 .info-page {
   padding: 0;
@@ -97,7 +109,12 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  animation: info-fade-up 0.6s ease-out backwards;
+  opacity: 0;
+  opacity: 0;
+  --float-rotation: 0deg;
+  transform: translateY(0) rotate(var(--float-rotation));
+  transform-origin: center;
+  animation: info-float-settle 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .info-hero-float-label {
@@ -113,37 +130,39 @@
   color: #64748b;
 }
 
-/* Left side: floats 1 & 2 in the left margin */
 .info-hero-float--1 {
   top: 8%;
   left: 2%;
-  transform: rotate(-10deg);
-  animation-delay: 0.05s;
+  --float-rotation: -10deg;
+  animation-delay: 0.1s;
 }
+
 .info-hero-float--2 {
   top: 55%;
   left: 4%;
-  transform: rotate(6deg);
-  animation-delay: 0.1s;
+  --float-rotation: 6deg;
+  animation-delay: 0.3s;
 }
-/* Right side: floats 3, 4 & 5 in the right margin */
+
 .info-hero-float--3 {
   top: 5%;
   right: 3%;
-  transform: rotate(8deg);
-  animation-delay: 0.07s;
+  --float-rotation: 8deg;
+  animation-delay: 0.6s;
 }
+
 .info-hero-float--4 {
   top: 38%;
   right: 1%;
-  transform: rotate(-5deg);
-  animation-delay: 0.12s;
+  --float-rotation: -5deg;
+  animation-delay: 0.45s;
 }
+
 .info-hero-float--5 {
   bottom: 5%;
   right: 5%;
-  transform: rotate(4deg);
-  animation-delay: 0.14s;
+  --float-rotation: 4deg;
+  animation-delay: 0.22s;
 }
 
 @media (max-width: 900px) {
