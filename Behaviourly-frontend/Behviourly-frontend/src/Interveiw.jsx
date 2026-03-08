@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useLocation } from "react-router-dom"
 import Camera from "./Camera"
 import { speakText } from "./elevenLabs"
+import "./Interview.css"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
 
@@ -18,12 +19,13 @@ export default function Interview() {
 
   const [questions, setQuestions] = useState([])
   const [currentQ, setCurrentQ] = useState(0)
-  const [score, setScore] = useState(100)
-  const [tip, setTip] = useState(null)
   const [loading, setLoading] = useState(true)
   const [apiError, setApiError] = useState(null)
+  const [started, setStarted] = useState(false)
+  const [ended, setEnded] = useState(false)
+  const cameraRef = useRef(null)
 
-  // Reset backend session + fetch questions from backend on load (uses role from InterviewContextPage)
+  // Fetch questions for this company and role
   useEffect(() => {
     fetch(`${API_BASE_URL}/reset-session`, { method: "POST" }).catch(() => {})
 
@@ -49,14 +51,21 @@ export default function Interview() {
         setApiError("Could not reach the server. Using default questions.")
         setLoading(false)
       })
-  }, [])
+  }, [company, role])
 
-  // Speak question when it changes
+  // Speak question when it changes (only after interview started, not when ended)
   useEffect(() => {
-    if (questions.length > 0 && currentQ < questions.length) {
+    if (started && !ended && questions.length > 0 && currentQ < questions.length) {
       speakText(questions[currentQ])
     }
-  }, [currentQ, questions])
+  }, [started, ended, currentQ, questions])
+
+  // Auto-start recording when advancing to next question (external controls mode)
+  useEffect(() => {
+    if (started && !ended && currentQ < questions.length) {
+      cameraRef.current?.startRecording?.()
+    }
+  }, [started, ended, currentQ, questions.length])
 
   function handleNextQuestion() {
     if (currentQ >= questions.length) return
@@ -64,86 +73,83 @@ export default function Interview() {
   }
 
   function handleRecordingComplete(blob, url) {
-    // After they stop recording, automatically move to the next question.
-    handleNextQuestion()
+    // Recording stopped — advancement is handled by Next Question button
   }
 
-  if (loading) return <div style={styles.loading}>Generating your interview questions... 🤔</div>
+  const complete = ended || currentQ >= questions.length
+
+  if (loading) return <div className="interview-loading">Generating your interview questions...</div>
+
+  if (questions.length === 0) {
+    return (
+      <div className="interview-page">
+        <div className="interview-error-box">
+          <strong>No questions loaded</strong>
+          {apiError && <p className="interview-error-text">{apiError}</p>}
+          <p className="interview-error-hint">Make sure the backend is running and GEMINI_API_KEY is set in hackcanada-backend/.env</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div style={styles.container}>
-      {apiError && (
-        <div style={styles.apiError}>
-          {apiError}
-        </div>
-      )}
-      {/* Context header (synced with InterviewContextPage) */}
-      {(company || role) && (
-        <div style={styles.contextHeader}>
-          {company && <span>{company}</span>}
-          {company && role && <span style={styles.contextDot}>·</span>}
-          {role && <span>{role}</span>}
-        </div>
-      )}
-      {/* Score bar */}
-      <div style={styles.scoreBar}>
-        <div style={styles.scoreLabel}>Score: {score}/100</div>
-        <div style={styles.barBg}>
-          <div style={{ ...styles.barFill, width: `${score}%` }} />
-        </div>
-        {tip && <div style={styles.tip}>{tip}</div>}
+    <div className="interview-page">
+      {/* Practicing for — at top */}
+      <div className="interview-header">
+        <span className="interview-label">Practicing for</span>
+        <span className="interview-context">{company && role ? `${company} · ${role}` : role}</span>
       </div>
 
-      {/* Current question or completion summary */}
-      <div style={styles.question}>
-        {currentQ < questions.length
-          ? `Q${currentQ + 1}: ${questions[currentQ]}`
-          : "Interview complete! 🎉"}
-      </div>
+      {apiError && <div className="interview-api-error">{apiError}</div>}
 
-      {/* During the interview: show camera + next button */}
-      {currentQ < questions.length && (
-        <>
-          <Camera onRecordingComplete={handleRecordingComplete} />
-          <button onClick={handleNextQuestion} style={styles.nextBtn}>
-            Next Question →
-          </button>
-        </>
-      )}
-
-      {/* After interview complete: placeholder for lowlight reel / summary */}
-      {currentQ >= questions.length && (
-        <div style={styles.summaryCard}>
-          <h3 style={styles.summaryTitle}>Lowlight reel coming up</h3>
-          <p style={styles.summaryText}>
-            This is where we’d play back your toughest moments and coaching tips from the interview.
+      {/* Questions — only visible after Start interview */}
+      {started && !complete && (
+        <div className="interview-questions-card">
+          <span className="interview-questions-label">Question {currentQ + 1} of {questions.length}</span>
+          <p className="interview-current-question">
+            {questions[currentQ]}
           </p>
         </div>
       )}
+
+      {/* Camera — always shown, controls below via externalControls */}
+      <div className="interview-section">
+        <Camera ref={cameraRef} onRecordingComplete={handleRecordingComplete} externalControls />
+        {!started ? (
+          <button
+            type="button"
+            onClick={() => setStarted(true)}
+            className="interview-start-btn"
+          >
+            Start interview
+          </button>
+        ) : !complete ? (
+          <div className="interview-actions">
+            <button
+              type="button"
+              onClick={() => {
+                cameraRef.current?.stopRecording?.()
+                handleNextQuestion()
+              }}
+              className="interview-next-btn"
+            >
+              Next Question →
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEnded(true)
+                cameraRef.current?.stopRecording?.()
+              }}
+              className="interview-end-btn"
+            >
+              End interview
+            </button>
+          </div>
+        ) : (
+          <div className="interview-done">Interview complete!</div>
+        )}
+      </div>
     </div>
   )
-}
-
-const styles = {
-  container: { maxWidth: "800px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" },
-  apiError: { padding: "10px 14px", marginBottom: "16px", background: "#fef3c7", color: "#92400e", borderRadius: "8px", fontSize: "14px" },
-  contextHeader: { fontSize: "14px", color: "#666", marginBottom: "16px", fontWeight: 500 },
-  contextDot: { margin: "0 6px", opacity: 0.6 },
-  loading: { textAlign: "center", padding: "40px", fontSize: "20px" },
-  scoreBar: { marginBottom: "20px" },
-  scoreLabel: { fontSize: "18px", fontWeight: "bold", marginBottom: "8px" },
-  barBg: { background: "#eee", borderRadius: "10px", height: "20px", overflow: "hidden" },
-  barFill: { background: "#4CAF50", height: "100%", borderRadius: "10px", transition: "width 0.5s" },
-  tip: { marginTop: "8px", color: "#ff9800", fontWeight: "bold" },
-  question: { fontSize: "22px", fontWeight: "bold", margin: "20px 0", padding: "20px", background: "#f5f5f5", borderRadius: "12px" },
-  nextBtn: { marginTop: "16px", background: "#2196F3", color: "white", border: "none", padding: "12px 32px", borderRadius: "8px", fontSize: "16px", cursor: "pointer" },
-  summaryCard: {
-    marginTop: "24px",
-    padding: "20px",
-    borderRadius: "12px",
-    border: "1px solid #e5e7eb",
-    background: "#f9fafb"
-  },
-  summaryTitle: { fontSize: "18px", fontWeight: "bold", marginBottom: "8px" },
-  summaryText: { fontSize: "14px", color: "#4b5563" }
 }

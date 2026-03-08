@@ -39,7 +39,7 @@ app.state.gemini_model = client
 MODEL = "gemini-3.1-pro-preview"
 
 # Fast model for question generation (stable, low latency).
-QUESTION_MODEL = "gemini-2.0-flash"
+QUESTION_MODEL = "gemini-2.5-flash"
 
 #how are we gonna score them
 SCORING_RULES = {
