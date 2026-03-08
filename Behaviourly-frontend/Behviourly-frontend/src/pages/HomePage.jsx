@@ -36,7 +36,14 @@ export default function HomePage() {
     }
   }, [user, userLoading]);
 
-  if (userLoading || dataLoading) return <div className="loading">Loading your dashboard...</div>;
+if (userLoading || dataLoading) {
+  return (
+    <div className="loading-container">
+      <div className="spinner"></div>
+      <p>Loading your dashboard...</p>
+    </div>
+  );
+}
 
   return (
     <div className="home-page">
