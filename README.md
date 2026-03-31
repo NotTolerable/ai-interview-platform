@@ -1,6 +1,8 @@
-# HackCanadaApp
+Made by: Babisan Pirapakaran, Allen Abraham, Jaloliddin Satimov, Farid Jamshid
 
-HackCanadaApp is an AI-powered interview preparation platform with a React frontend and Python backends.
+# Behaviourly
+
+Behaviourly is an AI-powered interview preparation platform with a React frontend and Python backends.
 It combines interview discovery, personalized prep context, mock interviews, and multimodal feedback (speech, stress/body-language cues, and answer quality).
 
 ## What this repo contains
